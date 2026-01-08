@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Importação de Vinhos</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Componente de Input Monetário
+        const MoneyInput = ({ label, value, onChange, placeholder, prefix = "R$", readOnly = false, subtext = null }) => (
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-stone-600">{label}</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 font-medium">{prefix}</span>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={value}
+                        readOnly={readOnly}
+                        onChange={(e) => onChange && onChange(parseFloat(e.target.value) || 0)}
+                        placeholder={placeholder}
+                        className={`w-full pl-12 pr-4 py-2 rounded-lg border outline-none transition-all shadow-sm ${
+                            readOnly 
+                            ? 'bg-stone-100 border-stone-200 text-stone-500 cursor-not-allowed' 
+                            : 'bg-white border-stone-300 focus:border-red-800 focus:ring-2 focus:ring-red-200'
+                        }`}
+                    />
+                </div>
+                {subtext && <p className="text-xs text-stone-400">{subtext}</p>}
+            </div>
+        );
+
+        // Componente de Input Numérico Simples
+        const NumberInput = ({ label, value, onChange, min = 0 }) => (
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-stone-600">{label}</label>
+                <input
+                    type="number"
+                    min={min}
+                    value={value}
+                    onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                    className="w-full px-4 py-2 rounded-lg border border-stone-300 focus:border-red-800 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm"
+                />
+            </div>
+        );
+
+        // Card de Resultado
+        const ResultCard = ({ title, value, subtext, highlight = false }) => (
+            <div className={`p-4 rounded-xl shadow-sm border ${highlight ? 'bg-red-900 border-red-900 text-white' : 'bg-white border-stone-200'}`}>
+                <p className={`text-sm mb-1 ${highlight ? 'text-red-200' : 'text-stone-500'}`}>{title}</p>
+                <p className="text-2xl font-bold">
+                    {value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+                {subtext && <p className={`text-xs mt-1 ${highlight ? 'text-red-300' : 'text-stone-400'}`}>{subtext}</p>}
+            </div>
+        );
+
+        const App = () => {
+            // --- ESTADOS ---
+            const [currency, setCurrency] = useState('BRL'); // Moeda selecionada
+            const [exchangeRate, setExchangeRate] = useState(250); // Cotação: 1 BRL = X ARS
+            const [wineCostInput, setWineCostInput] = useState(0); // Custo unitário digitado
+            
+            const [boxes, setBoxes] = useState(3); // Quantidade de caixas
+            const [bottlesPerBox, setBottlesPerBox] = useState(12); // Garrafas por caixa
+            
+            // Custos Logísticos Base
+            const [freightPerSlot, setFreightPerSlot] = useState(125); // Custo por lote de 3 caixas
+            const [localFreight, setLocalFreight] = useState(65); // Frete fixo local
+            const [taxRate, setTaxRate] = useState(0); // Imposto %
+
+            // --- CÁLCULOS ---
+            
+            // 1. Conversão do Vinho para Reais
+            const wineCostInBRL = currency === 'ARS' 
+                ? (wineCostInput / (exchangeRate || 1)) 
+                : wineCostInput;
+
+            // 2. Totais de Volume
+            const totalBottles = boxes * bottlesPerBox;
+            
+            // 3. Frete Inteligente (Regra das 3 caixas)
+            // Se eu tenho 4 caixas, preciso de 2 slots (Lotes). Math.ceil(4/3) = 2.
+            const slotsUsed = Math.ceil(boxes / 3);
+            const totalIntlFreight = slotsUsed * freightPerSlot;
+
+            // 4. Totais Financeiros
+            const totalWineCost = totalBottles * wineCostInBRL;
+            const totalLogistics = totalIntlFreight + localFreight;
+            const totalTax = totalWineCost * (taxRate / 100);
+            
+            const grandTotal = totalWineCost + totalLogistics + totalTax;
+            const finalCostPerBottle = totalBottles > 0 ? grandTotal / totalBottles : 0;
+
+            // 5. Percentuais para gráfico
+            const logisticsShare = grandTotal > 0 ? (totalLogistics / grandTotal) * 100 : 0;
+            const productShare = grandTotal > 0 ? (totalWineCost / grandTotal) * 100 : 0;
+            const taxShare = grandTotal > 0 ? (totalTax / grandTotal) * 100 : 0;
+
+            // Renderizar ícones Lucide
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [currency, boxes, wineCostInput]); // Recarrega ícones se necessário
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto pb-20">
+                    
+                    {/* Header */}
+                    <div className="mb-8 text-center md:text-left border-b border-stone-200 pb-6">
+                        <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                            <i data-lucide="wine" className="text-red-800 w-8 h-8"></i>
+                            <h1 className="text-3xl font-bold text-stone-900">Calculadora de Importação</h1>
+                        </div>
+                        <p className="text-stone-500">Simulação de custos Argentina -> Brasil (Correção de Frete por Lote)</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-12 gap-6">
+                        
+                        {/* Coluna da Esquerda: Inputs */}
+                        <div className="md:col-span-5 space-y-6">
+                            
+                            {/* 1. Configuração do Vinho */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                                <h2 className="font-bold text-lg mb-4 flex items-center gap-2 text-stone-800">
+                                    <i data-lucide="package" className="w-5 h-5 text-red-700"></i>
+                                    1. Escolha o Vinho
+                                </h2>
+                                
+                                {/* Toggle Moeda */}
+                                <div className="flex bg-stone-100 p-1 rounded-lg mb-4">
+                                    <button 
+                                        onClick={() => setCurrency('BRL')}
+                                        className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${currency === 'BRL' ? 'bg-white text-red-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+                                    >
+                                        Real (R$)
+                                    </button>
+                                    <button 
+                                        onClick={() => setCurrency('ARS')}
+                                        className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${currency === 'ARS' ? 'bg-white text-blue-600 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+                                    >
+                                        Peso Arg ($)
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {currency === 'ARS' && (
+                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-bold text-blue-800 uppercase tracking-wide">Cotação (Câmbio Blue)</label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-blue-600 font-medium">1 Real =</span>
+                                                    <input 
+                                                        type="number" 
+                                                        value={exchangeRate}
+                                                        onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                                                        className="w-24 px-2 py-1 rounded border border-blue-200 text-blue-900 font-bold focus:outline-none focus:border-blue-500"
+                                                    />
+                                                    <span className="text-sm text-blue-600 font-medium">Pesos</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <MoneyInput 
+                                        label={`Preço da Garrafa (${currency})`}
+                                        value={wineCostInput} 
+                                        onChange={setWineCostInput}
+                                        placeholder="0.00"
+                                        prefix={currency === 'BRL' ? 'R$' : '$'}
+                                        subtext={currency === 'ARS' && wineCostInput > 0 ? `Equivale a ${wineCostInBRL.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : null}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 2. Volume e Quantidade */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                                <h2 className="font-bold text-lg mb-4 flex items-center gap-2 text-stone-800">
+                                    <i data-lucide="layers" className="w-5 h-5 text-red-700"></i>
+                                    2. Quantidade
+                                </h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <NumberInput label="Total de Caixas" value={boxes} onChange={setBoxes} min={1} />
+                                    <NumberInput label="Garrafas/Caixa" value={bottlesPerBox} onChange={setBottlesPerBox} min={1} />
+                                </div>
+                                <div className="mt-4 bg-stone-50 p-3 rounded-lg border border-stone-100 text-sm flex justify-between items-center">
+                                    <span className="text-stone-600">Total de Garrafas:</span>
+                                    <span className="font-bold text-stone-900 text-lg">{totalBottles}</span>
+                                </div>
+                            </div>
+
+                            {/* 3. Logística */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                                <h2 className="font-bold text-lg mb-4 flex items-center gap-2 text-stone-800">
+                                    <i data-lucide="truck" className="w-5 h-5 text-red-700"></i>
+                                    3. Custos de Frete
+                                </h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <MoneyInput 
+                                            label="Custo Frete Int'l (por lote de 3 caixas)" 
+                                            value={freightPerSlot} 
+                                            onChange={setFreightPerSlot}
+                                        />
+                                        <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-100">
+                                            <p>Você está trazendo <strong>{boxes}</strong> caixas.</p>
+                                            <p>Isso ocupa <strong>{slotsUsed}</strong> lote(s) de envio.</p>
+                                            <p className="font-bold mt-1">Total Int'l: {totalIntlFreight.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <MoneyInput 
+                                        label="Frete Local (Retirada - Fixo)" 
+                                        value={localFreight} 
+                                        onChange={setLocalFreight}
+                                        subtext="Gasto fixo de combustível/transporte até o depósito."
+                                    />
+
+                                    <div className="pt-4 border-t border-stone-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-sm font-semibold text-stone-600">Imposto de Importação</label>
+                                            <span className="text-xs font-bold bg-stone-100 px-2 py-0.5 rounded text-stone-600">{taxRate}%</span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="100" 
+                                            value={taxRate} 
+                                            onChange={(e) => setTaxRate(Number(e.target.value))}
+                                            className="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-red-800"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna da Direita: Resultados */}
+                        <div className="md:col-span-7 space-y-6">
+                            
+                            {/* Card Principal - Custo Unitário */}
+                            <div className="bg-stone-900 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                                <div className="absolute -right-10 -top-10 opacity-10 rotate-12">
+                                    <i data-lucide="wine" className="w-64 h-64"></i>
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-2 mb-2 text-red-300 uppercase tracking-wider text-sm font-bold">
+                                        <i data-lucide="tag" className="w-4 h-4"></i>
+                                        Custo Final (Landed Cost)
+                                    </div>
+                                    <div className="text-6xl font-bold mb-4 tracking-tight">
+                                        {finalCostPerBottle.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        <span className="text-xl text-stone-400 font-normal ml-2">/ garrafa</span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-8 pt-6 border-t border-stone-700 mt-6">
+                                        <div>
+                                            <p className="text-stone-400 text-sm mb-1">Preço Original (BRL)</p>
+                                            <p className="text-xl font-semibold">{wineCostInBRL.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-stone-400 text-sm mb-1">Custo Adicionado</p>
+                                            <p className="text-xl font-semibold text-red-400">
+                                                + {(finalCostPerBottle - wineCostInBRL).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cards de Detalhamento */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <ResultCard 
+                                    title="Investimento Total (Vinhos)" 
+                                    value={totalWineCost}
+                                    subtext="Custo da mercadoria na origem"
+                                />
+                                <ResultCard 
+                                    title="Total Logística (Fretes)" 
+                                    value={totalLogistics}
+                                    subtext={`Int'l (${totalIntlFreight.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) + Local (${localFreight.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`}
+                                />
+                                {totalTax > 0 && (
+                                    <ResultCard 
+                                        title="Impostos" 
+                                        value={totalTax}
+                                        subtext={`Taxa aplicada: ${taxRate}%`}
+                                        highlight={true}
+                                    />
+                                )}
+                                <div className="p-4 rounded-xl bg-green-50 border border-green-200">
+                                    <p className="text-sm text-green-800 mb-1">Investimento Total do Projeto</p>
+                                    <p className="text-2xl font-bold text-green-900">
+                                        {grandTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </p>
+                                    <p className="text-xs text-green-700 mt-1">Para {totalBottles} garrafas</p>
+                                </div>
+                            </div>
+
+                            {/* Gráfico de Composição */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                                <h3 className="font-bold text-stone-800 mb-6 flex items-center gap-2">
+                                    <i data-lucide="pie-chart" className="w-5 h-5 text-stone-400"></i>
+                                    Composição do Custo
+                                </h3>
+                                
+                                <div className="flex h-8 rounded-full overflow-hidden w-full mb-6 bg-stone-100 ring-4 ring-stone-50">
+                                    <div style={{ width: `${productShare}%` }} className="bg-stone-800 flex items-center justify-center text-[10px] text-white font-bold transition-all" title="Produto">
+                                        {productShare > 10 && `${productShare.toFixed(0)}%`}
+                                    </div>
+                                    <div style={{ width: `${logisticsShare}%` }} className="bg-red-600 flex items-center justify-center text-[10px] text-white font-bold transition-all" title="Frete">
+                                        {logisticsShare > 10 && `${logisticsShare.toFixed(0)}%`}
+                                    </div>
+                                    <div style={{ width: `${taxShare}%` }} className="bg-amber-500 flex items-center justify-center text-[10px] text-white font-bold transition-all" title="Impostos">
+                                        {taxShare > 10 && `${taxShare.toFixed(0)}%`}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center p-3 hover:bg-stone-50 rounded-lg transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded bg-stone-800"></div>
+                                            <span className="text-sm font-medium">Vinho (Mercadoria)</span>
+                                        </div>
+                                        <span className="font-bold text-stone-700">{productShare.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 hover:bg-stone-50 rounded-lg transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded bg-red-600"></div>
+                                            <span className="text-sm font-medium">Fretes (Logística)</span>
+                                        </div>
+                                        <span className="font-bold text-stone-700">{logisticsShare.toFixed(1)}%</span>
+                                    </div>
+                                    {totalTax > 0 && (
+                                        <div className="flex justify-between items-center p-3 hover:bg-stone-50 rounded-lg transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-4 h-4 rounded bg-amber-500"></div>
+                                                <span className="text-sm font-medium">Impostos</span>
+                                            </div>
+                                            <span className="font-bold text-stone-700">{taxShare.toFixed(1)}%</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
