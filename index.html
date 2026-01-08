@@ -41,14 +41,14 @@
             // Configurações de Moeda
             const [currency, setCurrency] = useState('ARS'); // 'BRL' ou 'ARS'
             const [exchangeRate, setExchangeRate] = useState(270);
-            const [wineCostInput, setWineCostInput] = useState(0); 
+            const [wineCostInput, setWineCostInput] = useState(); 
 
             // Configurações de Volume
-            const [boxes, setBoxes] = useState(3);
+            const [boxes, setBoxes] = useState(1);
             const [bottlesPerBox, setBottlesPerBox] = useState(6);
             
             // Custos de Logística
-            const [intlFreight, setIntlFreight] = useState(40); // R$ 40 por lote de 3
+            const [intlFreight, setIntlFreight] = useState(40); // R$ 40 por lote de 1
             const [localFreight, setLocalFreight] = useState(65);
             
             // Estratégia de Venda
@@ -64,7 +64,7 @@
             const totalBottles = boxes * bottlesPerBox;
             
             // Frete Internacional por lote de 3 caixas
-            const slotsUsed = Math.ceil(boxes / 1);
+            const slotsUsed = Math.ceil(boxes / 3);
             const totalIntlFreight = slotsUsed * intlFreight;
             const totalFreight = totalIntlFreight + localFreight;
             
@@ -156,7 +156,7 @@
                                         <InputField label="Caixas" value={boxes} onChange={setBoxes} prefix="" />
                                         <InputField label="Gars./Caixa" value={bottlesPerBox} onChange={setBottlesPerBox} prefix="" />
                                     </div>
-                                    <InputField label="Frete Internacional (Lote)" value={intlFreight} onChange={setIntlFreight} helpText="R$ 40 por cada 1 caixas" />
+                                    <InputField label="Frete Internacional (Lote)" value={intlFreight} onChange={setIntlFreight} helpText="R$ 40 por cada 3 caixas" />
                                     <InputField label="Frete Retirada Local" value={localFreight} onChange={setLocalFreight} />
                                     
                                     <div className="mt-2 text-[10px] bg-slate-50 p-2 rounded border border-dashed border-slate-200 text-slate-500">
