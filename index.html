@@ -52,7 +52,7 @@
             const [localFreight, setLocalFreight] = useState(65);
             
             // Estratégia de Venda
-            const [salePrice, setSalePrice] = useState(180);
+            const [salePrice, setSalePrice] = useState();
 
             // --- CÁLCULOS ---
             
@@ -64,7 +64,7 @@
             const totalBottles = boxes * bottlesPerBox;
             
             // Frete Internacional por lote de 3 caixas
-            const slotsUsed = Math.ceil(boxes / 3);
+            const slotsUsed = Math.ceil(boxes / 1);
             const totalIntlFreight = slotsUsed * intlFreight;
             const totalFreight = totalIntlFreight + localFreight;
             
