@@ -74,15 +74,15 @@
         const App = () => {
             // --- ESTADOS ---
             const [currency, setCurrency] = useState('BRL'); // Moeda selecionada
-            const [exchangeRate, setExchangeRate] = useState(250); // Cotação: 1 BRL = X ARS
+            const [exchangeRate, setExchangeRate] = useState(270); // Cotação: 1 BRL = X ARS
             const [wineCostInput, setWineCostInput] = useState(0); // Custo unitário digitado
             
             const [boxes, setBoxes] = useState(3); // Quantidade de caixas
-            const [bottlesPerBox, setBottlesPerBox] = useState(12); // Garrafas por caixa
+            const [bottlesPerBox, setBottlesPerBox] = useState(6); // Garrafas por caixa
             
             // Custos Logísticos Base
-            const [freightPerSlot, setFreightPerSlot] = useState(125); // Custo por lote de 3 caixas
-            const [localFreight, setLocalFreight] = useState(65); // Frete fixo local
+            const [freightPerSlot, setFreightPerSlot] = useState(40); // Custo por lote de 3 caixas
+            const [localFreight, setLocalFreight] = useState(60); // Frete fixo local
             const [taxRate, setTaxRate] = useState(0); // Imposto %
 
             // --- CÁLCULOS ---
@@ -129,7 +129,7 @@
                             <i data-lucide="wine" className="text-red-800 w-8 h-8"></i>
                             <h1 className="text-3xl font-bold text-stone-900">Calculadora de Importação</h1>
                         </div>
-                        <p className="text-stone-500">Simulação de custos Argentina -> Brasil (Correção de Frete por Lote)</p>
+                        <p className="text-stone-500">Simulação de custos Argentina para o Brasil (Correção de Frete por Lote)</p>
                     </div>
 
                     <div className="grid md:grid-cols-12 gap-6">
